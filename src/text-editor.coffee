@@ -193,6 +193,9 @@ class TextEditor extends Model
     @gutterContainer.destroy()
     @emitter.emit 'did-destroy'
 
+  setLinesYardstick: (linesYardstick) ->
+    @displayBuffer.setLinesYardstick(linesYardstick)
+
   ###
   Section: Event Subscription
   ###

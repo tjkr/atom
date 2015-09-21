@@ -45,6 +45,7 @@ class DisplayBuffer extends Model
     @disposables.add @buffer.onDidUpdateMarkers => @emitter.emit 'did-update-markers'
     @foldMarkerAttributes = Object.freeze({class: 'fold', displayBufferId: @id})
     folds = (new Fold(this, marker) for marker in @buffer.findMarkers(@getFoldMarkerAttributes()))
+    @updateAllScreenLines()
     @decorateFold(fold) for fold in folds
 
   setLinesYardstick: (@linesYardstick) ->
@@ -677,41 +678,15 @@ class DisplayBuffer extends Model
     end = @bufferPositionForScreenPosition(screenRange.end)
     new Range(start, end)
 
-  pixelRangeForScreenRange: (screenRange, clip=true) ->
+  pixelRangeForScreenRange: (screenRange, clip) ->
     {start, end} = Range.fromObject(screenRange)
     {start: @pixelPositionForScreenPosition(start, clip), end: @pixelPositionForScreenPosition(end, clip)}
 
-  pixelPositionForScreenPosition: (screenPosition, clip=true) ->
-    screenPosition = Point.fromObject(screenPosition)
-    screenPosition = @clipScreenPosition(screenPosition) if clip
-
-    targetRow = screenPosition.row
-    targetColumn = screenPosition.column
-    defaultCharWidth = @defaultCharWidth
-
-    top = targetRow * @lineHeightInPixels
-    left = 0
-    column = 0
-
-    iterator = @tokenizedLineForScreenRow(targetRow).getTokenIterator()
-    while iterator.next()
-      charWidths = @getScopedCharWidths(iterator.getScopes())
-      valueIndex = 0
-      value = iterator.getText()
-      while valueIndex < value.length
-        if iterator.isPairedCharacter()
-          char = value
-          charLength = 2
-          valueIndex += 2
-        else
-          char = value[valueIndex]
-          charLength = 1
-          valueIndex++
-
-        return {top, left} if column is targetColumn
-        left += charWidths[char] ? defaultCharWidth unless char is '\0'
-        column += charLength
-    {top, left}
+  pixelPositionForScreenPosition: (screenPosition, clip) ->
+    if @linesYardstick?
+      @linesYardstick.pixelPositionForScreenPosition(screenPosition, clip)
+    else
+      {left: 0, top: 0}
 
   screenPositionForPixelPosition: (pixelPosition) ->
     targetTop = pixelPosition.top

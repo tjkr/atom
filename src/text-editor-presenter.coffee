@@ -41,6 +41,7 @@ class TextEditorPresenter
     @updating = false
 
   setLinesYardstick: (@linesYardstick) ->
+    @model.setLinesYardstick(@linesYardstick)
 
   destroy: ->
     @disposables.dispose()

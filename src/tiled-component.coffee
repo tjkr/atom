@@ -48,7 +48,7 @@ class TiledComponent
     return
 
   getComponentForTile: (tileRow) ->
-    @componentsByTileId[tileRow]
+    @componentsByTileId?[tileRow]
 
   getTiles: ->
     values(@componentsByTileId).map (component) -> component.getDomNode()

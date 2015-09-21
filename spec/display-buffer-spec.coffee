@@ -2,14 +2,16 @@ DisplayBuffer = require '../src/display-buffer'
 MockLinesYardstick = require './mock-lines-yardstick'
 _ = require 'underscore-plus'
 
-fdescribe "DisplayBuffer", ->
+describe "DisplayBuffer", ->
   [displayBuffer, buffer, mockLinesYardstick, changeHandler, tabLength] = []
   beforeEach ->
     tabLength = 2
 
     buffer = atom.project.bufferForPathSync('sample.js')
     displayBuffer = new DisplayBuffer({buffer, tabLength})
-    mockLinesYardstick = new MockLinesYardstick(displayBuffer)
+    mockLinesYardstick = new MockLinesYardstick
+      model: displayBuffer
+      charWidth: 10
     displayBuffer.setLinesYardstick(mockLinesYardstick)
     changeHandler = jasmine.createSpy 'changeHandler'
     displayBuffer.onDidChange changeHandler
@@ -303,6 +305,7 @@ fdescribe "DisplayBuffer", ->
 
     it "sets ::scrollLeft to 0 and keeps it there when soft wrapping is enabled", ->
       displayBuffer.setDefaultCharWidth(10)
+      mockLinesYardstick.setCharacterWidth(10)
       displayBuffer.setWidth(85)
 
       displayBuffer.setSoftWrapped(false)
@@ -1198,13 +1201,11 @@ fdescribe "DisplayBuffer", ->
 
         displayBuffer.setLineHeightInPixels(20)
         displayBuffer.setDefaultCharWidth(10)
-
-        for char in ['r', 'e', 't', 'u', 'r', 'n']
-          displayBuffer.setScopedCharWidth(["source.js", "keyword.control.js"], char, 11)
+        mockLinesYardstick.setCharacterWidth(10)
 
         {start, end} = marker.getPixelRange()
         expect(start.top).toBe 5 * 20
-        expect(start.left).toBe (4 * 10) + (6 * 11)
+        expect(start.left).toBe (10 * 10)
 
     describe 'when there are multiple DisplayBuffers for a buffer', ->
       describe 'when a marker is created', ->
@@ -1306,6 +1307,7 @@ fdescribe "DisplayBuffer", ->
 
   describe "::setScrollLeft", ->
     beforeEach ->
+      mockLinesYardstick.setCharacterWidth(10)
       displayBuffer.setLineHeightInPixels(10)
       displayBuffer.setDefaultCharWidth(10)
 
@@ -1327,6 +1329,7 @@ fdescribe "DisplayBuffer", ->
   describe "::scrollToScreenPosition(position, [options])", ->
     beforeEach ->
       displayBuffer.setLineHeightInPixels(10)
+      mockLinesYardstick.setCharacterWidth(10)
       displayBuffer.setDefaultCharWidth(10)
       displayBuffer.setHorizontalScrollbarHeight(0)
       displayBuffer.setHeight(50)
@@ -1359,6 +1362,7 @@ fdescribe "DisplayBuffer", ->
     it "recomputes the scroll width when the default character width changes", ->
       expect(displayBuffer.getScrollWidth()).toBe 10 * 65 + cursorWidth
 
+      mockLinesYardstick.setCharacterWidth(12)
       displayBuffer.setDefaultCharWidth(12)
       expect(displayBuffer.getScrollWidth()).toBe 12 * 65 + cursorWidth
 
@@ -1369,22 +1373,11 @@ fdescribe "DisplayBuffer", ->
       buffer.delete([[6, 10], [6, 12]], ' ')
       expect(displayBuffer.getScrollWidth()).toBe 10 * 64 + cursorWidth
 
-    it "recomputes the scroll width when the scoped character widths change", ->
+    it "recomputes the scroll width when the character widths change", ->
       operatorWidth = 20
-      displayBuffer.setScopedCharWidth(['source.js', 'keyword.operator.js'], '<', operatorWidth)
-      expect(displayBuffer.getScrollWidth()).toBe 10 * 64 + operatorWidth + cursorWidth
-
-    it "recomputes the scroll width when the scoped character widths change in a batch", ->
-      operatorWidth = 20
-
-      displayBuffer.onDidChangeCharacterWidths changedSpy = jasmine.createSpy()
-
-      displayBuffer.batchCharacterMeasurement ->
-        displayBuffer.setScopedCharWidth(['source.js', 'keyword.operator.js'], '<', operatorWidth)
-        displayBuffer.setScopedCharWidth(['source.js', 'keyword.operator.js'], '?', operatorWidth)
-
-      expect(displayBuffer.getScrollWidth()).toBe 10 * 63 + operatorWidth * 2 + cursorWidth
-      expect(changedSpy.callCount).toBe 1
+      mockLinesYardstick.setCharacterWidth(13)
+      displayBuffer.characterWidthsChanged()
+      expect(displayBuffer.getScrollWidth()).toBe 13 * 65 + cursorWidth
 
   describe "::getVisibleRowRange()", ->
     beforeEach ->
