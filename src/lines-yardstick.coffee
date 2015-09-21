@@ -22,8 +22,9 @@ class LinesYardstick
 
   measure: (screenRows, fn) ->
     @prepareScreenRowsForMeasurement(screenRows)
-    fn()
+    result = fn()
     @cleanup()
+    result
 
   pixelPositionForScreenPosition: (screenPosition, clip=true) ->
     screenPosition = Point.fromObject(screenPosition)

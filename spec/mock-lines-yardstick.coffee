@@ -7,6 +7,9 @@ class MockLinesYardstick
 
   setCharacterWidth: (@charWidth) ->
 
+  measure: (screenRows, fn) ->
+    fn()
+
   pixelPositionForScreenPosition: (screenPosition, clip=true) ->
     screenPosition = Point.fromObject(screenPosition)
     screenPosition = @model.clipScreenPosition(screenPosition) if clip

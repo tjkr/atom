@@ -684,7 +684,8 @@ class DisplayBuffer extends Model
 
   pixelPositionForScreenPosition: (screenPosition, clip) ->
     if @linesYardstick?
-      @linesYardstick.pixelPositionForScreenPosition(screenPosition, clip)
+      @linesYardstick.measure [screenPosition.row], =>
+        @linesYardstick.pixelPositionForScreenPosition(screenPosition, clip)
     else
       {left: 0, top: 0}
 

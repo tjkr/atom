@@ -367,11 +367,13 @@ class TextEditorPresenter
   setScreenRowsToMeasure: (screenRows) ->
     @screenRowsToMeasure = screenRows
     @shouldUpdateLinesState = true
+    @shouldUpdateLineNumbersState = true
     @shouldUpdateDecorations = true
 
   clearScreenRowsToMeasure: ->
     @screenRowsToMeasure = []
     @shouldUpdateLinesState = true
+    @shouldUpdateLineNumbersState = true
     @shouldUpdateDecorations = true
 
   updateTilesState: ->
