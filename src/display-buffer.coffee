@@ -45,8 +45,10 @@ class DisplayBuffer extends Model
     @disposables.add @buffer.onDidUpdateMarkers => @emitter.emit 'did-update-markers'
     @foldMarkerAttributes = Object.freeze({class: 'fold', displayBufferId: @id})
     folds = (new Fold(this, marker) for marker in @buffer.findMarkers(@getFoldMarkerAttributes()))
-    @updateAllScreenLines()
     @decorateFold(fold) for fold in folds
+
+  setLinesYardstick: (@linesYardstick) ->
+    @updateAllScreenLines() if @linesYardstick?
 
   subscribeToScopedConfigSettings: =>
     @scopedConfigSubscriptions?.dispose()
@@ -98,6 +100,7 @@ class DisplayBuffer extends Model
 
   copy: ->
     newDisplayBuffer = new DisplayBuffer({@buffer, tabLength: @getTabLength(), @largeFileMode})
+    newDisplayBuffer.setLinesYardstick(@linesYardstick)
     newDisplayBuffer.setScrollTop(@getScrollTop())
     newDisplayBuffer.setScrollLeft(@getScrollLeft())
 

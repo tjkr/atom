@@ -1,13 +1,16 @@
 DisplayBuffer = require '../src/display-buffer'
+MockLinesYardstick = require './mock-lines-yardstick'
 _ = require 'underscore-plus'
 
-describe "DisplayBuffer", ->
-  [displayBuffer, buffer, changeHandler, tabLength] = []
+fdescribe "DisplayBuffer", ->
+  [displayBuffer, buffer, mockLinesYardstick, changeHandler, tabLength] = []
   beforeEach ->
     tabLength = 2
 
     buffer = atom.project.bufferForPathSync('sample.js')
     displayBuffer = new DisplayBuffer({buffer, tabLength})
+    mockLinesYardstick = new MockLinesYardstick(displayBuffer)
+    displayBuffer.setLinesYardstick(mockLinesYardstick)
     changeHandler = jasmine.createSpy 'changeHandler'
     displayBuffer.onDidChange changeHandler
 
@@ -58,6 +61,7 @@ describe "DisplayBuffer", ->
     it "updates the display buffer prior to invoking change handlers registered on the buffer", ->
       buffer.onDidChange -> expect(displayBuffer2.tokenizedLineForScreenRow(0).text).toBe "testing"
       displayBuffer2 = new DisplayBuffer({buffer, tabLength})
+      displayBuffer2.setLinesYardstick(mockLinesYardstick)
       buffer.setText("testing")
 
   describe "soft wrapping", ->
@@ -241,6 +245,7 @@ describe "DisplayBuffer", ->
         it "correctly renders the original wrapped line", ->
           buffer = atom.project.buildBufferSync(null, '')
           displayBuffer = new DisplayBuffer({buffer, tabLength, editorWidthInChars: 30, softWrapped: true})
+          displayBuffer.setLinesYardstick(mockLinesYardstick)
 
           buffer.insert([0, 0], "the quick brown fox jumps over the lazy dog.")
           buffer.insert([0, Infinity], '\n')
@@ -314,6 +319,7 @@ describe "DisplayBuffer", ->
       buffer.release()
       buffer = atom.project.bufferForPathSync('two-hundred.txt')
       displayBuffer = new DisplayBuffer({buffer, tabLength})
+      displayBuffer.setLinesYardstick(mockLinesYardstick)
       displayBuffer.onDidChange changeHandler
 
     describe "when folds are created and destroyed", ->
@@ -428,6 +434,7 @@ describe "DisplayBuffer", ->
       describe "when there is another display buffer pointing to the same buffer", ->
         it "does not consider folds to be nested inside of folds from the other display buffer", ->
           otherDisplayBuffer = new DisplayBuffer({buffer, tabLength})
+          otherDisplayBuffer.setLinesYardstick(mockLinesYardstick)
           otherDisplayBuffer.createFold(1, 5)
 
           displayBuffer.createFold(2, 4)
