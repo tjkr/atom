@@ -123,7 +123,9 @@ class Workspace extends Model
     @emit 'editor-created', editor if includeDeprecatedAPIs
 
   installShellCommands: ->
-    require('./command-installer').installShellCommandsInteractively()
+    CommandInstaller = require('./command-installer')
+    commandInstaller = new CommandInstaller(atom.getVersion())
+    commandInstaller.installShellCommandsInteractively()
 
   subscribeToActiveItem: ->
     @updateWindowTitle()
