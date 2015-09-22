@@ -5,14 +5,6 @@ _ = require 'underscore-plus'
 module.exports = (grunt) ->
   {spawn} = require('./task-helpers')(grunt)
 
-  fillTemplate = (filePath, data) ->
-    template = _.template(String(fs.readFileSync("#{filePath}.in")))
-    filled = template(data)
-
-    outputPath = path.join(grunt.config.get('atom.buildDir'), path.basename(filePath))
-    grunt.file.write(outputPath, filled)
-    outputPath
-
   getInstalledSize = (buildDir, callback) ->
     cmd = 'du'
     args = ['-sk', path.join(buildDir, 'Atom')]
@@ -20,10 +12,12 @@ module.exports = (grunt) ->
       installedSize = stdout.split(/\s+/)?[0] or '200000' # default to 200MB
       callback(null, installedSize)
 
+  fillTemplate = (filePath, data, outputPath) ->
+    content = _.template(String(fs.readFileSync("#{filePath}.in")))(data)
+    grunt.file.write(outputPath, content)
+
   grunt.registerTask 'mkdeb', 'Create debian package', ->
     done = @async()
-    buildDir = grunt.config.get('atom.buildDir')
-    channel = grunt.config.get('atom.channel')
 
     if process.arch is 'ia32'
       arch = 'i386'
@@ -32,20 +26,34 @@ module.exports = (grunt) ->
     else
       return done("Unsupported arch #{process.arch}")
 
-    {name, version, description} = grunt.file.readJSON('package.json')
+    appName = grunt.config.get('atom.appName')
+    buildDir = grunt.config.get('atom.buildDir')
+    channel = grunt.config.get('atom.channel')
+    appFileName = grunt.config.get('atom.appFileName')
+    apmFileName = grunt.config.get('atom.apmFileName')
+    {version, description} = grunt.config.get('atom.metadata')
+
     section = 'devel'
     maintainer = 'GitHub <atom@github.com>'
     installDir = '/usr'
     iconName = 'atom'
+
     executable = path.join(installDir, 'share', 'atom', 'atom')
+    controlFilePath = path.join(buildDir, 'control')
+    desktopFilePath = path.join(buildDir, appFileName + '.desktop')
+    iconPath = path.join('resources', 'app-icons', channel, 'png', '1024.png')
+
     getInstalledSize buildDir, (error, installedSize) ->
-      data = {name, version, description, section, arch, maintainer, installDir, iconName, installedSize, executable}
-      controlFilePath = fillTemplate(path.join('resources', 'linux', 'debian', 'control'), data)
-      desktopFilePath = fillTemplate(path.join('resources', 'linux', 'atom.desktop'), data)
-      iconPath = path.join('resources', 'app-icons', channel, 'png', '1024.png')
+      data = {
+        appName, appFileName, apmFileName, version, description, section, arch,
+        maintainer, installDir, iconName, installedSize, executable
+      }
+
+      fillTemplate(path.join('resources', 'linux', 'atom.desktop'), data, desktopFilePath)
+      fillTemplate(path.join('resources', 'linux', 'debian', 'control'), data, controlFilePath)
 
       cmd = path.join('script', 'mkdeb')
-      args = [version, arch, controlFilePath, desktopFilePath, iconPath, buildDir]
+      args = [version, channel, arch, controlFilePath, desktopFilePath, iconPath, buildDir]
       spawn {cmd, args}, (error) ->
         if error?
           done(error)
