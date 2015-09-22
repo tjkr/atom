@@ -1,18 +1,18 @@
 path = require 'path'
-_ = require 'underscore-plus'
 fs = require 'fs-plus'
 runas = null
 temp = require 'temp'
 
 module.exports = (grunt) ->
-  {cp, mkdir, rm} = require('./task-helpers')(grunt)
+  {cp, fillTemplate, mkdir, rm} = require('./task-helpers')(grunt)
 
   grunt.registerTask 'install', 'Install the built application', ->
+    appName = grunt.config.get('atom.appName')
     appFileName = grunt.config.get('atom.appFileName')
     apmFileName = grunt.config.get('atom.apmFileName')
+    buildDir = grunt.config.get('atom.buildDir')
     installDir = grunt.config.get('atom.installDir')
     shellAppDir = grunt.config.get('atom.shellAppDir')
-    appName = grunt.config.get('atom.appName')
     {description} = grunt.config.get('atom.metadata')
 
     if process.platform is 'win32'
@@ -32,25 +32,24 @@ module.exports = (grunt) ->
       cp shellAppDir, tempFolder
       fs.renameSync(tempFolder, installDir)
     else
-      binDir = path.join(installDir, 'bin')
       shareDir = path.join(installDir, 'share', appFileName)
-
-      mkdir binDir
-      cp 'atom.sh', path.join(binDir, appFileName)
       rm shareDir
       mkdir path.dirname(shareDir)
       cp shellAppDir, shareDir
 
       unless installDir.indexOf(process.env.TMPDIR ? '/tmp') is 0
-        desktopFile = path.join('resources', 'linux', 'atom.desktop.in')
-        desktopInstallFile = path.join(installDir, 'share', 'applications', appFileName + '.desktop')
+        iconPath = path.join(shareDir, 'resources', 'app.asar.unpacked', 'resources', 'atom.png')
 
-        iconName = path.join(shareDir, 'resources', 'app.asar.unpacked', 'resources', 'atom.png')
-        executable = path.join(shareDir, 'atom')
-        template = _.template(String(fs.readFileSync(desktopFile)))
-        filled = template({appName, description, iconName, executable})
+        mkdir path.join(installDir, 'share', 'applications')
+        fillTemplate(
+          path.join('resources', 'linux', 'atom.desktop.in'),
+          path.join(installDir, 'share', 'applications', appFileName + '.desktop'),
+          {appName, appFileName, description, iconPath, installDir}
+        )
 
-        grunt.file.write(desktopInstallFile, filled)
+      binDir = path.join(installDir, 'bin')
+      mkdir binDir
+      cp 'atom.sh', path.join(binDir, appFileName)
 
       rm(path.join(binDir, apmFileName))
       fs.symlinkSync(

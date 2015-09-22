@@ -1,16 +1,17 @@
-fs = require 'fs'
 path = require 'path'
-_ = require 'underscore-plus'
 
 module.exports = (grunt) ->
-  {spawn, rm, mkdir} = require('./task-helpers')(grunt)
-
-  fillTemplate = (filePath, data, outputPath) ->
-    content = _.template(String(fs.readFileSync("#{filePath}.in")))(data)
-    grunt.file.write(outputPath, content)
+  {spawn, fillTemplate, rm, mkdir} = require('./task-helpers')(grunt)
 
   grunt.registerTask 'mkrpm', 'Create rpm package', ->
     done = @async()
+
+    appName = grunt.config.get('atom.appName')
+    appFileName = grunt.config.get('atom.appFileName')
+    apmFileName = grunt.config.get('atom.apmFileName')
+    buildDir = grunt.config.get('atom.buildDir')
+    installDir = '/usr'
+    {version, description} = grunt.config.get('atom.metadata')
 
     if process.arch is 'ia32'
       arch = 'i386'
@@ -19,11 +20,12 @@ module.exports = (grunt) ->
     else
       return done("Unsupported arch #{process.arch}")
 
-    buildDir = grunt.config.get('atom.buildDir')
-    installDir = grunt.config.get('atom.installDir')
-    appFileName = grunt.config.get('atom.appFileName')
-    apmFileName = grunt.config.get('atom.apmFileName')
-    {version, description} = grunt.config.get('atom.metadata')
+    desktopFilePath = path.join(buildDir, appFileName + '.desktop')
+    fillTemplate(
+      path.join('resources', 'linux', 'atom.desktop.in'),
+      desktopFilePath,
+      {appName, appFileName, description, installDir, iconPath: appFileName}
+    )
 
     # RPM versions can't have dashes in them.
     # * http://www.rpm.org/max-rpm/ch-rpm-file-format.html
@@ -31,22 +33,19 @@ module.exports = (grunt) ->
     version = version.replace(/-beta/, "~beta")
     version = version.replace(/-dev/, "~dev")
 
-    rpmDir = path.join(buildDir, 'rpm')
-    shareDir = path.join(installDir, 'share', appFileName)
-    executable = path.join(shareDir, 'atom')
     specFilePath = path.join(buildDir, appFileName + '.spec')
-    desktopFilePath = path.join(buildDir, appFileName + '.desktop')
+    fillTemplate(
+      path.join('resources', 'linux', 'redhat', 'atom.spec.in'),
+      specFilePath,
+      {appName, appFileName, apmFileName, installDir, version, description}
+    )
 
+    rpmDir = path.join(buildDir, 'rpm')
     rm rpmDir
     mkdir rpmDir
 
-    iconName = 'atom'
-    data = {appFileName, apmFileName, version, description, installDir, iconName, executable}
-    fillTemplate(path.join('resources', 'linux', 'redhat', 'atom.spec'), data, specFilePath)
-    fillTemplate(path.join('resources', 'linux', 'atom.desktop'), data, desktopFilePath)
-
     cmd = path.join('script', 'mkrpm')
-    args = [specFilePath, desktopFilePath, buildDir]
+    args = [appName, appFileName, specFilePath, desktopFilePath, buildDir]
     spawn {cmd, args}, (error) ->
       if error?
         done(error)
